@@ -1,0 +1,46 @@
+services:
+  # ================================
+  # REDIS - For BullMQ Job Queue
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: reachinbox-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================
+  # POSTGRESQL - Main Database
+  # ================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: reachinbox-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: reachinbox_user
+      POSTGRES_PASSWORD: reachinbox_password
+      POSTGRES_DB: reachinbox_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reachinbox_user -d reachinbox_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ================================
+# VOLUMES - Persist data on restart
+# ================================
+volumes:
+  redis-data:
+  postgres-data:

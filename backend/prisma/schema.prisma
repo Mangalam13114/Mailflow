@@ -1,0 +1,94 @@
+// ================================
+// PRISMA SCHEMA - ReachInbox
+// ================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+// ================================
+// USER MODEL
+// ================================
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  emails  Email[]
+  senders Sender[]
+
+  @@map("users")
+}
+
+// ================================
+// SENDER MODEL (Email accounts to send from)
+// ================================
+model Sender {
+  id           String   @id @default(uuid())
+  email        String
+  smtpHost     String
+  smtpPort     Int
+  smtpUser     String
+  smtpPassword String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails Email[]
+
+  @@unique([userId, email])
+  @@map("senders")
+}
+
+// ================================
+// EMAIL MODEL
+// ================================
+model Email {
+  id          String      @id @default(uuid())
+  to          String
+  subject     String
+  body        String      @db.Text
+  status      EmailStatus @default(SCHEDULED)
+  scheduledAt DateTime
+  sentAt      DateTime?
+  error       String?     @db.Text
+  jobId       String?     @unique
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senderId String?
+  sender   Sender? @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("emails")
+}
+
+// ================================
+// EMAIL STATUS ENUM
+// ================================
+enum EmailStatus {
+  SCHEDULED
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
